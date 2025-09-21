@@ -1,8 +1,10 @@
 package com.abnercila.ecommerce_app.config;
 
 import com.abnercila.ecommerce_app.model.Product;
+import com.abnercila.ecommerce_app.model.Review;
 import com.abnercila.ecommerce_app.model.User;
 import com.abnercila.ecommerce_app.repository.ProductRepository;
+import com.abnercila.ecommerce_app.repository.ReviewRepository;
 import com.abnercila.ecommerce_app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -18,6 +22,7 @@ import java.math.BigDecimal;
 public class DataLoader implements CommandLineRunner {
 
     private final ProductRepository productRepository;
+    private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -25,6 +30,7 @@ public class DataLoader implements CommandLineRunner {
     public void run(String... args) throws Exception {
         loadUsers();
         loadProducts();
+        loadReviews();
     }
 
     private void loadUsers() {
@@ -188,6 +194,85 @@ public class DataLoader implements CommandLineRunner {
             ));
 
             log.info("Productos cargados exitosamente");
+        }
+    }
+    
+    private void loadReviews() {
+        if (reviewRepository.count() == 0) {
+            log.info("Cargando reseñas de ejemplo...");
+            
+            // Obtener usuarios y productos para las reseñas
+            Optional<User> user1 = userRepository.findByEmail("user@techstore.com");
+            Optional<User> user2 = userRepository.findByEmail("admin@techstore.com");
+            
+            List<Product> products = productRepository.findAll();
+            
+            if (user1.isPresent() && user2.isPresent() && !products.isEmpty()) {
+                // Reseñas para MacBook Pro M3
+                Product macbook = products.stream()
+                    .filter(p -> p.getName().contains("MacBook"))
+                    .findFirst().orElse(null);
+                    
+                if (macbook != null) {
+                    reviewRepository.save(new Review(
+                        user1.get(),
+                        macbook,
+                        5,
+                        "Excelente laptop para desarrollo. La batería dura todo el día y el rendimiento es increíble."
+                    ));
+                    
+                    reviewRepository.save(new Review(
+                        user2.get(),
+                        macbook,
+                        4,
+                        "Muy buena calidad, aunque el precio es alto. Vale la pena para trabajo profesional."
+                    ));
+                }
+                
+                // Reseñas para iPhone 15 Pro Max
+                Product iphone = products.stream()
+                    .filter(p -> p.getName().contains("iPhone"))
+                    .findFirst().orElse(null);
+                    
+                if (iphone != null) {
+                    reviewRepository.save(new Review(
+                        user1.get(),
+                        iphone,
+                        5,
+                        "La cámara es espectacular, especialmente para video. El chip A17 Pro es muy rápido."
+                    ));
+                }
+                
+                // Reseñas para AirPods Pro
+                Product airpods = products.stream()
+                    .filter(p -> p.getName().contains("AirPods"))
+                    .findFirst().orElse(null);
+                    
+                if (airpods != null) {
+                    reviewRepository.save(new Review(
+                        user2.get(),
+                        airpods,
+                        4,
+                        "La cancelación de ruido funciona muy bien. Cómodos para uso prolongado."
+                    ));
+                }
+                
+                // Más reseñas para otros productos
+                Product monitor = products.stream()
+                    .filter(p -> p.getName().contains("Monitor"))
+                    .findFirst().orElse(null);
+                    
+                if (monitor != null) {
+                    reviewRepository.save(new Review(
+                        user1.get(),
+                        monitor,
+                        3,
+                        "Buena calidad de imagen pero el soporte podría ser mejor."
+                    ));
+                }
+            }
+            
+            log.info("Reseñas cargadas exitosamente");
         }
     }
 }

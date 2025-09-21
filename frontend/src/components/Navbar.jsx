@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useCart } from '../CartContext';
 import { useAuth } from '../AuthContext';
-import { Menu, X, ShoppingCart, User, LogIn, LogOut, Search, Package } from 'lucide-react';
+import { Menu, X, ShoppingCart, User, LogIn, LogOut, Search, Package, AlertTriangle } from 'lucide-react';
+import CartIcon from './CartIcon';
 import OrderHistory from './OrderHistory';
+import InventoryAlert from './InventoryAlert';
 import './Navbar.css';
 
 const Navbar = ({ onCartClick, onLoginClick, onRegisterClick, onSearchChange, onAboutClick, onContactClick }) => {
@@ -12,6 +14,7 @@ const Navbar = ({ onCartClick, onLoginClick, onRegisterClick, onSearchChange, on
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showOrderHistory, setShowOrderHistory] = useState(false);
+  const [showInventoryAlert, setShowInventoryAlert] = useState(false);
 
   const totalItems = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -113,6 +116,18 @@ const Navbar = ({ onCartClick, onLoginClick, onRegisterClick, onSearchChange, on
                     <Package size={16} />
                     Mis Pedidos
                   </button>
+                  
+                  {/* Mostrar opción de inventario solo para administradores */}
+                  {user?.role === 'ADMIN' && (
+                    <button className="user-menu-item" onClick={() => {
+                      setShowInventoryAlert(true);
+                      setShowUserMenu(false);
+                    }}>
+                      <AlertTriangle size={16} />
+                      Alertas de Inventario
+                    </button>
+                  )}
+                  
                   <hr />
                   <button className="user-menu-item logout" onClick={handleLogout}>
                     <LogOut size={16} />
@@ -194,6 +209,10 @@ const Navbar = ({ onCartClick, onLoginClick, onRegisterClick, onSearchChange, on
       
       {showOrderHistory && (
         <OrderHistory onClose={() => setShowOrderHistory(false)} />
+      )}
+      
+      {showInventoryAlert && user && user.role === 'admin' && (
+        <InventoryAlert onClose={() => setShowInventoryAlert(false)} />
       )}
     </nav>
   );

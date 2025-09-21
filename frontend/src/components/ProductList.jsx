@@ -88,12 +88,36 @@ const ProductList = ({ searchTerm }) => {
   }, [products, searchTerm, currentFilter, sortBy]);
 
   const handleAddToCart = (product) => {
+    // Verificar stock antes de agregar al carrito
+    if (product.stock <= 0) {
+      alert('Este producto está agotado');
+      return;
+    }
+    
     addToCart({
       id: product.id,
       name: product.name,
       price: product.price,
-      imageUrl: product.imageUrl
+      imageUrl: product.imageUrl,
+      stock: product.stock
     });
+    
+    // Mostrar alerta si el stock es bajo después de agregar al carrito
+    if (product.stock <= 5) {
+      alert(`¡Solo quedan ${product.stock} unidades disponibles!`);
+    }
+  };
+
+  const getStockStatus = (stock) => {
+    if (stock <= 0) {
+      return { status: 'out-of-stock', text: 'Agotado', class: 'stock-out' };
+    } else if (stock <= 5) {
+      return { status: 'low-stock', text: `Solo ${stock} disponibles`, class: 'stock-low' };
+    } else if (stock <= 10) {
+      return { status: 'limited-stock', text: `${stock} disponibles`, class: 'stock-limited' };
+    } else {
+      return { status: 'in-stock', text: 'En stock', class: 'stock-available' };
+    }
   };
 
   const formatPrice = (price) => {
@@ -204,17 +228,24 @@ const ProductList = ({ searchTerm }) => {
                   {product.name}
                 </h3>
                 <p className="product-description">{product.description}</p>
+                
+                {/* Stock status */}
+                <div className={`stock-status ${getStockStatus(product.stock).class}`}>
+                  <span className="stock-text">{getStockStatus(product.stock).text}</span>
+                  {product.stock <= 5 && product.stock > 0 && (
+                    <span className="stock-warning">¡Últimas unidades!</span>
+                  )}
+                </div>
+                
                 <div className="product-footer">
                   <span className="product-price">{formatPrice(product.price)}</span>
                   <button 
-                    className="add-to-cart-btn"
+                    className={`add-to-cart-btn ${product.stock <= 0 ? 'disabled' : ''}`}
                     onClick={() => handleAddToCart(product)}
+                    disabled={product.stock <= 0}
                   >
-                    Agregar al Carrito
+                    {product.stock <= 0 ? 'Agotado' : 'Agregar al Carrito'}
                   </button>
-                </div>
-                <div className="product-stock">
-                  Stock: {product.stock} unidades
                 </div>
               </div>
             </div>

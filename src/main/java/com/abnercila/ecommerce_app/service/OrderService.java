@@ -25,13 +25,14 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
+    private final ProductService productService;
     
     @Transactional
     public OrderResponse createOrder(CheckoutRequest checkoutRequest, User user) {
         log.info("Creando orden para usuario: {}", user.getEmail());
         
-        // Validar productos y stock
-        validateCartItems(checkoutRequest.getCartItems());
+        // Validar productos y stock ANTES de crear la orden
+        validateCartItemsAndStock(checkoutRequest.getCartItems());
         
         // Crear la orden
         Order order = new Order();
@@ -112,15 +113,34 @@ public class OrderService {
         return convertToOrderResponse(order);
     }
     
-    private void validateCartItems(List<CheckoutRequest.CartItemDto> cartItems) {
+    private void validateCartItemsAndStock(List<CheckoutRequest.CartItemDto> cartItems) {
+        // Primero validamos que todos los productos existan y tengan suficiente stock
+        List<ProductService.ProductStockCheck> stockChecks = new ArrayList<>();
+        
         for (CheckoutRequest.CartItemDto item : cartItems) {
             Product product = productRepository.findById(item.getProductId())
                     .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + item.getProductId()));
             
-            if (product.getStock() < item.getQuantity()) {
-                throw new RuntimeException("Stock insuficiente para el producto: " + product.getName());
+            // Verificar que el precio no haya cambiado significativamente
+            if (product.getPrice().compareTo(item.getPrice()) != 0) {
+                log.warn("El precio del producto {} ha cambiado. Precio actual: {}, Precio en carrito: {}", 
+                        product.getName(), product.getPrice(), item.getPrice());
             }
+            
+            stockChecks.add(new ProductService.ProductStockCheck(item.getProductId(), item.getQuantity()));
         }
+        
+        // Validar stock de todos los productos
+        if (!productService.validateStockForMultipleProducts(stockChecks)) {
+            throw new RuntimeException("Stock insuficiente para uno o más productos en el carrito");
+        }
+        
+        // Reducir el stock de todos los productos de forma transaccional
+        if (!productService.reduceStockForMultipleProducts(stockChecks)) {
+            throw new RuntimeException("Error al actualizar el inventario");
+        }
+        
+        log.info("Stock actualizado correctamente para {} productos", cartItems.size());
     }
     
     private BigDecimal calculateSubtotal(List<CheckoutRequest.CartItemDto> cartItems) {
